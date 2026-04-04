@@ -540,16 +540,30 @@ dontClickBtn.addEventListener('click', () => {
   const r = reactions[dontClickCount % reactions.length];
   dontClickCount++;
   dontClickBtn.textContent = r.text;
+
   if (!bgm.muted) {
     bgm.volume = r.vol;
     if (!bgmStarted) startBGM();
     else bgm.play().catch(() => {});
   }
+
   // Chaos shake on the button
   dontClickBtn.style.animation = 'none';
-  reflow(dontClickBtn);
+  reflow(dontClickBtn); // Assuming reflow is defined elsewhere to restart animation
   dontClickBtn.style.animation = 'dontShake 0.5s ease';
+
+  // --- ADDED REDIRECT SEQUENCE ---
+  if (dontClickCount === reactions.length) {
+    // Disable the button so they can't click again while waiting
+    dontClickBtn.disabled = true; 
+    
+    setTimeout(() => {
+      window.location.href = 'idiot.html';
+    }, 2000); // 2 second delay for dramatic effect
+  }
+  // -------------------------------
 });
+
 
 </script>
 
