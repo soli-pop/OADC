@@ -390,7 +390,7 @@ html, body {
 
 <!-- BGM (base64 embedded) -->
 <audio id="bgm" loop preload="auto">
-  <source src="../asset/bgm.txt" type="audio/mpeg">
+  <source id="bgm-source" type="audio/mpeg">
 </audio>
 
 <script>
@@ -421,6 +421,30 @@ function startBGM() {
   bgm.volume = 0.7;
   bgm.play().then(() => { bgmStarted = true; }).catch(() => {});
 }
+
+  async function loadBase64Audio() {
+  try {
+    // 1. Fetch the text from your .txt file
+    const response = await fetch('../asset/bgm.txt');
+    const base64String = await response.text();
+
+    // 2. Get the audio elements
+    const audio = document.getElementById('bgm');
+    const source = document.getElementById('bgm-source');
+
+    // 3. Set the src using the Data URI format
+    // Note: Ensure your .txt doesn't already have the "data:audio/..." prefix
+    source.src = `data:audio/mpeg;base64,${base64String.trim()}`;
+
+    // 4. Reload the player so it recognizes the new source
+    audio.load();
+  } catch (err) {
+    console.error("Failed to load audio:", err);
+  }
+}
+
+loadBase64Audio();
+  
 
 // ── Force-reflow helper ──────────────────────────────────────────────────
 function reflow(el) { void el.offsetWidth; }
