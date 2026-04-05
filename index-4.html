@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Our Amazing Digital Circus</title>
+<link rel="icon" type="image/png" href="asset/favicon.png">
+<style>
+
+/* ─── Reset & Base ──────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  font-family: 'Trebuchet MS', 'Gill Sans', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ─── START MASK (Interaction Gate) ─────────── */
+/* FIX #1: Added #start-mask overlay — was entirely missing */
+#start-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.6s ease;
+}
+#start-mask.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+#start-mask-text {
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: clamp(13px, 3vw, 22px);
+  font-weight: 700;
+  letter-spacing: clamp(4px, 1.5vw, 10px);
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    0 0 12px rgba(255,255,255,0.8),
+    0 0 40px rgba(180,120,255,0.5);
+  animation: maskBlink 1.1s step-end infinite;
+}
+@keyframes maskBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* ─── Background Layer ──────────────────────── */
+#bg-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+#intro-video,
+#freeze-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+#freeze-frame {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+#freeze-frame.visible { opacity: 1; }
+
+/* ─── Outro Video Overlay ───────────────────── */
+#outro-container {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  display: none;
+}
+#outro-container.active { display: block; }
+#outro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ─── Menu Wrapper ──────────────────────────── */
+#menu-wrapper {
+  position: relative;
+  z-index: 5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 3.5vh, 44px);
+  padding: clamp(24px, 5vw, 60px) clamp(16px, 4vw, 40px);
+  pointer-events: none;
+}
+#menu-wrapper.ready { pointer-events: all; }
+
+/* ─── Logo ──────────────────────────────────── */
+#logo-container {
+  width: clamp(200px, 52vw, 480px);
+  max-width: 88vw;
+}
+#logo {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: scale(0);
+  opacity: 0;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,0.5));
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+/* ─── Button Images ─────────────────────────── */
+#buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 2vh, 20px);
+  width: 100%;
+}
+
+.menu-btn {
+  position: relative;
+  width: clamp(180px, 44vw, 340px);
+  max-width: 88vw;
+  height: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transform: scale(0);
+  opacity: 0;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  display: block;
+  line-height: 0;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
+  /* FIX #3: Added transform to transition; changed duration to 0.2s */
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.menu-btn img {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* FIX #3: Correct hover — scale(1.08) + grayscale(1) brightness(0.8) per spec */
+.menu-btn:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.6)) grayscale(1) brightness(0.8);
+}
+.menu-btn:active {
+  transform: scale(0.96);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)) brightness(0.92);
+}
+.menu-btn:disabled { pointer-events: none; cursor: default; }
+
+/* ─── Options Panel ─────────────────────────── */
+#options-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#options-panel.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#options-box {
+  background: linear-gradient(160deg, #1a0d2e 0%, #0d1a40 100%);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: clamp(24px, 5vw, 48px) clamp(28px, 6vw, 56px);
+  width: clamp(280px, 80vw, 440px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+
+#options-title {
+  font-size: clamp(18px, 3.5vw, 26px);
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(120,180,255,0.5);
+}
+
+/* Mute toggle row */
+.opt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+.opt-label {
+  font-size: clamp(13px, 2vw, 16px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Toggle switch */
+.toggle-wrap { flex-shrink: 0; }
+#mute-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.25s ease, border-color 0.25s ease;
+  outline: none;
+}
+#mute-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+#mute-toggle:checked {
+  background: #e53e3e;
+  border-color: #e53e3e;
+}
+#mute-toggle:checked::after {
+  transform: translateX(24px);
+}
+
+/* DON'T CLICK ME button */
+#dont-click-btn {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(12px, 2vw, 15px);
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  position: relative;
+  overflow: hidden;
+}
+#dont-click-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.12);
+  opacity: 0;
+  border-radius: inherit;
+  transition: opacity 0.15s;
+}
+#dont-click-btn:hover { transform: scale(1.04); box-shadow: 0 6px 28px rgba(219,39,119,0.55); }
+#dont-click-btn:hover::before { opacity: 1; }
+#dont-click-btn:active { transform: scale(0.97); }
+
+/* Close button */
+#close-options {
+  align-self: flex-end;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.7);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+#close-options:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ─── Jelly In — Logo ───────────────────────── */
+@keyframes jellyInLogo {
+  0%   { transform: scale(0,0);        opacity: 0; }
+  28%  { transform: scale(1.55,0.52);  opacity: 1; }
+  46%  { transform: scale(0.68,1.52); }
+  60%  { transform: scale(1.22,0.82); }
+  73%  { transform: scale(0.92,1.10); }
+  84%  { transform: scale(1.06,0.96); }
+  100% { transform: scale(1,1);        opacity: 1; }
+}
+
+/* ─── Jelly In — Button ─────────────────────── */
+@keyframes jellyInBtn {
+  0%   { transform: scale(0,0);        opacity: 0; }
+  32%  { transform: scale(1.45,0.58);  opacity: 1; }
+  50%  { transform: scale(0.75,1.38); }
+  64%  { transform: scale(1.18,0.86); }
+  78%  { transform: scale(0.94,1.07); }
+  88%  { transform: scale(1.04,0.97); }
+  100% { transform: scale(1,1);        opacity: 1; }
+}
+
+/* ─── FIX #4: Clean Zoom-Out Exit ───────────── */
+/* Replaced whirlpoolOut (oscillating squish) with a direct scale(0).
+   Spec: "simply scale down rapidly toward zero … no spinning, rotating,
+   or spiraling. Clean, direct zoom-out." */
+@keyframes zoomOut {
+  0%   { transform: scale(1); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+#logo.jelly-in     { animation: jellyInLogo 1.15s cubic-bezier(0.22,0.61,0.36,1) forwards; }
+.menu-btn.jelly-in { animation: jellyInBtn  0.92s cubic-bezier(0.22,0.61,0.36,1) forwards; }
+#logo.jelly-out    { animation: zoomOut 0.55s cubic-bezier(0.55,0.085,0.68,0.53) forwards; }
+.menu-btn.jelly-out{ animation: zoomOut 0.42s cubic-bezier(0.55,0.085,0.68,0.53) forwards; }
+
+/* Stagger delays for button entry */
+.menu-btn:nth-child(1) { animation-delay: 0.30s; }
+.menu-btn:nth-child(2) { animation-delay: 0.48s; }
+.menu-btn:nth-child(3) { animation-delay: 0.66s; }
+
+/* ─── Responsive ────────────────────────────── */
+
+/* Portrait phones — anchor toward bottom */
+@media (max-width: 480px) and (orientation: portrait) {
+  #menu-wrapper {
+    justify-content: flex-end;
+    padding-bottom: 10vh;
+    min-height: 100svh;
+  }
+  #logo-container { width: clamp(180px, 76vw, 320px); }
+}
+
+/* Landscape small screens — allow scroll, keep vertical layout */
+@media (orientation: landscape) and (max-height: 500px) {
+  #menu-wrapper {
+    min-height: auto;
+    padding-top: 40px;
+    padding-bottom: 40px;
+    justify-content: flex-start;
+  }
+  html, body { overflow-y: auto; }
+}
+
+/* ─── dontShake (moved to <head>) ───────────── */
+/* FIX (minor): Moved from stray <style> after </script> into <head> */
+@keyframes dontShake {
+  0%,100% { transform: translateX(0) rotate(0); }
+  15% { transform: translateX(-6px) rotate(-2deg); }
+  30% { transform: translateX(6px) rotate(2deg); }
+  45% { transform: translateX(-9px) rotate(-3deg); }
+  60% { transform: translateX(9px) rotate(3deg); }
+  75% { transform: translateX(-4px) rotate(-1deg); }
+  90% { transform: translateX(4px) rotate(1deg); }
+}
+
+</style>
+</head>
+<body>
+
+<!-- FIX #1: Interaction Gate — was entirely missing -->
+<div id="start-mask">
+  <span id="start-mask-text">Press Anywhere to Continue</span>
+</div>
+
+<!-- Background -->
+<div id="bg-container">
+  <!-- FIX #1: Removed autoplay — video must not play until mask is clicked -->
+  <video id="intro-video" src="asset/intro.mp4" muted playsinline preload="auto"></video>
+  <img   id="freeze-frame" src="asset/freeze_frame.jpg" alt="" aria-hidden="true" draggable="false">
+</div>
+
+<!-- Outro -->
+<div id="outro-container">
+  <video id="outro-video" src="asset/outro.mp4" muted playsinline preload="auto"></video>
+</div>
+
+<!-- Options Panel -->
+<div id="options-panel" role="dialog" aria-modal="true" aria-label="Options">
+  <div id="options-box">
+    <div id="options-title">Options</div>
+
+    <div class="opt-row">
+      <span class="opt-label">Mute Music</span>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="mute-toggle" role="switch" aria-label="Mute background music">
+      </div>
+    </div>
+
+    <button id="dont-click-btn">&#x26A0; DON'T CLICK ME</button>
+
+    <button id="close-options">&#x2715;&nbsp; Close</button>
+  </div>
+</div>
+
+<!-- Menu -->
+<div id="menu-wrapper">
+  <div id="logo-container">
+    <img id="logo" src="asset/logo.png" alt="Our Amazing Digital Circus" draggable="false">
+  </div>
+  <div id="buttons">
+    <button class="menu-btn" id="btn-play"    data-href="#play"   >
+      <img src="asset/play.png"    alt="Play">
+    </button>
+    <button class="menu-btn" id="btn-options" data-href="#options">
+      <img src="asset/options.png" alt="Options">
+    </button>
+    <button class="menu-btn" id="btn-quit"    data-href="#quit"   >
+      <img src="asset/quit.png"    alt="Quit">
+    </button>
+  </div>
+</div>
+
+<!-- BGM -->
+<audio id="bgm" loop preload="auto">
+  <source id="bgm-source" type="audio/mpeg">
+</audio>
+
+<!-- FIX #2: Added bubble SFX element — was entirely missing -->
+<audio id="sfx-bubble" preload="auto">
+  <source id="sfx-bubble-source" type="audio/mpeg">
+</audio>
+
+<script>
+"use strict";
+
+// ── Refs ────────────────────────────────────────────────────────────────
+const startMask      = document.getElementById('start-mask');
+const introVideo     = document.getElementById('intro-video');
+const freezeFrame    = document.getElementById('freeze-frame');
+const logo           = document.getElementById('logo');
+const menuWrapper    = document.getElementById('menu-wrapper');
+const outroContainer = document.getElementById('outro-container');
+const outroVideo     = document.getElementById('outro-video');
+const buttons        = Array.from(document.querySelectorAll('.menu-btn'));
+const bgm            = document.getElementById('bgm');
+const sfxBubble      = document.getElementById('sfx-bubble');
+const optionsPanel   = document.getElementById('options-panel');
+const muteToggle     = document.getElementById('mute-toggle');
+const dontClickBtn   = document.getElementById('dont-click-btn');
+const closeOptions   = document.getElementById('close-options');
+const btnOptions     = document.getElementById('btn-options');
+
+let isExiting   = false;
+let bgmStarted  = false;
+let dontClickCount = 0;
+
+// ── FIX #2: Load BOTH audio files on page load ───────────────────────────
+// Spec: "loadAllAudio called immediately on page load … ready before mask click"
+// Previous code only loaded bgm.txt; bubble.txt was never fetched at all.
+// Previous path was '../asset/bgm.txt' — fixed to 'asset/bgm.txt'.
+async function loadAllAudio() {
+  try {
+    const [bgmRes, bubbleRes] = await Promise.all([
+      fetch('asset/bgm.txt'),
+      fetch('asset/bubble.txt'),
+    ]);
+    const bgmB64    = await bgmRes.text();
+    const bubbleB64 = await bubbleRes.text();
+
+    document.getElementById('bgm-source').src         = `data:audio/mpeg;base64,${bgmB64.trim()}`;
+    document.getElementById('sfx-bubble-source').src  = `data:audio/mpeg;base64,${bubbleB64.trim()}`;
+
+    bgm.load();
+    sfxBubble.load();
+  } catch (err) {
+    console.error('Failed to load audio assets:', err);
+  }
+}
+
+// Called immediately — audio is decoding while user reads the mask
+loadAllAudio();
+
+// ── BGM helpers ──────────────────────────────────────────────────────────
+function startBGM() {
+  if (bgmStarted) return;
+  bgm.volume = 0.7;
+  bgm.play().then(() => { bgmStarted = true; }).catch(() => {});
+}
+
+// ── FIX #2: Bubble SFX — currentTime reset for rapid overlapping playback
+function playSFX() {
+  if (bgm.muted) return;
+  sfxBubble.currentTime = 0;
+  sfxBubble.play().catch(() => {});
+}
+
+// ── FIX #1: Mask click handler ───────────────────────────────────────────
+// Phase 1→2: fade mask out, play intro, start BGM simultaneously.
+startMask.addEventListener('click', () => {
+  // Fade out mask
+  startMask.classList.add('fade-out');
+  startMask.addEventListener('transitionend', () => startMask.remove(), { once: true });
+
+  // Play intro video
+  introVideo.play().catch(() => onIntroEnded()); // graceful fallback if video fails
+
+  // FIX #2: BGM starts at mask click, not 600ms after intro ends
+  startBGM();
+}, { once: true });
+
+// ── Force-reflow helper ──────────────────────────────────────────────────
+function reflow(el) { void el.offsetWidth; }
+
+function swapAnim(el, remove, add, delay = 0) {
+  const apply = () => {
+    el.classList.remove(remove);
+    reflow(el);
+    el.style.transition = 'none';
+    el.style.transform = '';
+    reflow(el);
+    el.style.transition = '';
+    el.classList.add(add);
+  };
+  delay > 0 ? setTimeout(apply, delay) : apply();
+}
+
+// ── SEQUENCE 1: Intro ends → show menu ──────────────────────────────────
+function onIntroEnded() {
+  freezeFrame.classList.add('visible');
+  setTimeout(() => {
+    introVideo.style.transition = 'opacity 0.5s ease';
+    introVideo.style.opacity = '0';
+  }, 80);
+
+  swapAnim(logo, 'jelly-out', 'jelly-in');
+  buttons.forEach(btn => swapAnim(btn, 'jelly-out', 'jelly-in'));
+  menuWrapper.classList.add('ready');
+}
+
+introVideo.addEventListener('ended', onIntroEnded);
+introVideo.addEventListener('error', () => { freezeFrame.classList.add('visible'); onIntroEnded(); });
+// NOTE: autoplaySafety timeout removed — intro only starts on mask click,
+// so the 3-second fallback is no longer needed or appropriate.
+
+// ── SEQUENCE 2: Button clicked → exit → outro ────────────────────────────
+function handleButtonClick(clickedBtn) {
+  if (isExiting) return;
+  isExiting = true;
+
+  // FIX #2: Play bubble SFX on every menu button click
+  playSFX();
+
+  const href = clickedBtn.dataset.href;
+  buttons.forEach(btn => { btn.disabled = true; btn.style.pointerEvents = 'none'; });
+
+  swapAnim(clickedBtn, 'jelly-in', 'jelly-out');
+  buttons.filter(b => b !== clickedBtn).forEach((btn, i) => {
+    swapAnim(btn, 'jelly-in', 'jelly-out', 110 * (i + 1));
+  });
+
+  const logoDelay = 110 * (buttons.length - 1) + 160;
+  swapAnim(logo, 'jelly-in', 'jelly-out', logoDelay);
+
+  setTimeout(() => {
+    bgm.pause();
+    outroContainer.classList.add('active');
+    outroVideo.play().catch(() => redirectTo(href));
+    outroVideo.addEventListener('ended', () => redirectTo(href), { once: true });
+    setTimeout(() => redirectTo(href), 12000);
+  }, logoDelay + 500);
+}
+
+function redirectTo(href) { window.location.href = href; }
+
+// ── Options button — open panel ──────────────────────────────────────────
+btnOptions.addEventListener('click', (e) => {
+  e.stopPropagation();
+  // FIX #2: SFX on options button too
+  playSFX();
+  optionsPanel.classList.add('open');
+  isExiting = false;
+  buttons.forEach(btn => { btn.disabled = false; btn.style.pointerEvents = ''; });
+});
+
+// Other buttons trigger exit
+document.getElementById('btn-play').addEventListener('click', () => handleButtonClick(document.getElementById('btn-play')));
+document.getElementById('btn-quit').addEventListener('click', () => handleButtonClick(document.getElementById('btn-quit')));
+
+// ── Options Panel ────────────────────────────────────────────────────────
+closeOptions.addEventListener('click', () => optionsPanel.classList.remove('open'));
+optionsPanel.addEventListener('click', (e) => {
+  if (e.target === optionsPanel) optionsPanel.classList.remove('open');
+});
+
+// Mute toggle — controls bgm.muted per spec
+muteToggle.addEventListener('change', () => {
+  bgm.muted = muteToggle.checked;
+  if (!muteToggle.checked && !bgmStarted) startBGM();
+});
+
+// DON'T CLICK ME
+const reactions = [
+  { text: '⚠️ I SAID DON\'T!',            vol: 1.0 },
+  { text: 'WHYYY 😭',                      vol: 1.0 },
+  { text: 'OK fine, here\'s a cookie 🍪',  vol: 0.5 },
+  { text: 'THAT\'S IT — FULL BLAST 🔊',    vol: 1.0 },
+  { text: 'You monster. 💀',               vol: 1.0 },
+  { text: '…you win. 🏳️',                 vol: 0.3 },
+];
+
+dontClickBtn.addEventListener('click', () => {
+  const r = reactions[dontClickCount % reactions.length];
+  dontClickCount++;
+  dontClickBtn.textContent = r.text;
+
+  if (!bgm.muted) {
+    bgm.volume = r.vol;
+    if (!bgmStarted) startBGM();
+    else bgm.play().catch(() => {});
+  }
+
+  dontClickBtn.style.animation = 'none';
+  reflow(dontClickBtn);
+  dontClickBtn.style.animation = 'dontShake 0.5s ease';
+
+  if (dontClickCount === reactions.length) {
+    dontClickBtn.disabled = true;
+    setTimeout(() => { window.location.href = 'idiot.html'; }, 2000);
+  }
+});
+
+</script>
+</body>
+</html>
