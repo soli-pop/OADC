@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theatre of Dreams - Character Selection</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-gold: #aa8620;
+            --parchment: #fdf5e6;
+            --dark-wood: #2c1e16;
+            --panel-bg: rgba(253, 245, 230, 0.95);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            background: url('1000008933.png') no-repeat center center fixed; /* Uses your red curtain image */
+            background-color: #800000; /* Fallback red */
+            background-size: cover;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- AUDIO & HIDDEN ELEMENTS --- */
+        .hidden { display: none !important; }
+
+        /* --- WRENCH MENU --- */
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--dark-wood);
+            color: var(--gold);
+            border: 2px solid var(--gold);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+        }
+        .settings-btn:hover { transform: scale(1.1); }
+
+        .settings-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 3px solid var(--gold);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 99;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .settings-panel.active { display: flex; }
+        
+        .settings-panel button, .settings-panel a {
+            background: var(--dark-wood);
+            color: var(--parchment);
+            border: 1px solid var(--gold);
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .settings-panel button:hover, .settings-panel a:hover { background: var(--dark-gold); }
+
+        /* --- MAIN DASHBOARD --- */
+        .dashboard {
+            display: flex;
+            flex-direction: row;
+            background: var(--panel-bg);
+            border: 5px solid var(--dark-wood);
+            outline: 3px solid var(--gold);
+            width: 90%;
+            max-width: 1000px;
+            height: 80vh;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        /* --- LEFT SIDE: GRID --- */
+        .roster-section {
+            flex: 1;
+            padding: 20px;
+            border-right: 3px solid var(--dark-wood);
+            overflow-y: auto;
+        }
+        
+        .roster-title {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 0;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 10px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+        }
+
+        .char-card {
+            background: #e6dac3;
+            border: 2px solid var(--dark-wood);
+            border-radius: 5px;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: bold;
+        }
+        .char-card:hover, .char-card.selected {
+            border-color: var(--gold);
+            background: var(--dark-wood);
+            color: var(--gold);
+            transform: scale(1.05);
+        }
+
+        .upload-btn {
+            background: #a33;
+            color: white;
+            border: 2px dashed var(--gold);
+        }
+
+        /* --- RIGHT SIDE: DETAILS --- */
+        .details-section {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .char-preview-box {
+            width: 200px;
+            height: 200px;
+            border: 4px solid var(--gold);
+            background: #ccc;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .char-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            width: 80%;
+        }
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-family: inherit;
+            border: 2px solid var(--dark-wood);
+            background: transparent;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .stats-container {
+            width: 80%;
+            text-align: left;
+            margin-top: 15px;
+        }
+        .stat-bar-wrapper {
+            margin-bottom: 8px;
+        }
+        .stat-label { font-size: 0.9rem; font-weight: bold; text-transform: uppercase;}
+        .stat-bar-bg {
+            background: var(--dark-wood);
+            height: 12px;
+            width: 100%;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+        .stat-bar-fill {
+            background: var(--gold);
+            height: 100%;
+            width: 0%; /* Set via JS */
+            transition: width 0.5s ease-out;
+        }
+
+        .desc-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.05);
+            border-left: 4px solid var(--gold);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            text-align: left;
+            width: 80%;
+        }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            .dashboard {
+                flex-direction: column;
+                height: 95vh;
+                overflow-y: auto;
+            }
+            .roster-section { border-right: none; border-bottom: 3px solid var(--dark-wood); }
+            .details-section { padding-bottom: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bgm-audio" loop>
+        <source src="data:audio/mp3;base64,SUQz..." type="audio/mp3">
+    </audio>
+    
+    <audio id="sfx-audio">
+        <source src="data:audio/mp3;base64,SUQz..." type="audio/mp3">
+    </audio>
+
+    <button class="settings-btn" onclick="toggleSettings(); playSFX();">🔧</button>
+    <div class="settings-panel" id="settingsPanel">
+        <button onclick="toggleMute(); playSFX();" id="muteBtn">🔊 Mute BGM</button>
+        <button onclick="goHome(); playSFX();">🏠 Home</button>
+        <div style="border-top: 1px solid var(--gold); margin: 5px 0;"></div>
+        <a href="#" onclick="playSFX()">Terms of Service</a>
+        <a href="#" onclick="playSFX()">Privacy Policy</a>
+        <a href="#" onclick="playSFX()">Contact Us</a>
+    </div>
+
+    <div class="dashboard">
+        <div class="roster-section">
+            <h2 class="roster-title">CASTING CALL</h2>
+            <div class="grid-container" id="characterGrid">
+                </div>
+            
+            <div style="margin-top: 20px;">
+                <label for="customImageUpload" class="char-card upload-btn" style="width: 100%; aspect-ratio: auto; padding: 15px;" onclick="playSFX()">
+                    [+] ADD ORIGINAL CHARACTER
+                </label>
+                <input type="file" id="customImageUpload" accept="image/*" class="hidden">
+            </div>
+        </div>
+
+        <div class="details-section">
+            <div class="char-preview-box">
+                <img id="previewImage" src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22200%22%20height%3D%22200%22%20viewBox%3D%220%200%20200%20200%22%3E%3Crect%20fill%3D%22%23ccc%22%20width%3D%22200%22%20height%3D%22200%22%2F%3E%3Ctext%20fill%3D%22%23666%22%20font-family%3D%22sans-serif%22%20font-size%3D%2216%22%20dy%3D%2210.5%22%20font-weight%3D%22bold%22%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%3E200x200%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Character Preview">
+                <label for="baseImageUpload" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 5px; cursor: pointer; border-radius: 3px; font-size: 0.8rem;" onclick="playSFX()">📷 Upload</label>
+                <input type="file" id="baseImageUpload" accept="image/*" class="hidden">
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="charNameInput" placeholder="Enter Character Name...">
+            </div>
+
+            <h3 id="roleDisplay" style="margin: 0; color: var(--dark-gold);">Select a Role</h3>
+
+            <div class="stats-container" id="statsContainer">
+                </div>
+
+            <div class="desc-box" id="descBox">
+                Select a character from the roster to view their theatrical dossier.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Character Database (From previous prompt)
+        const characters = [
+            {
+                id: "role_jester", roleName: "Jester",
+                description: "The newest arrival — a frightened jester in red-and-blue stripes. Anxious and panicky, bad at performing, but often forced into leadership and improvisation. High agility helps her survive, though the pressure constantly pushes her toward abstraction.",
+                stats: { agility: 90, stability: 20, leadership: 60 }
+            },
+            {
+                id: "role_trickster", roleName: "Trickster",
+                description: "The chaotic purple rabbit who lives for mischief. He steals, sets traps, lies, and pranks everyone purely for fun. Charismatic bully with high dexterity — never to be trusted, but always escapes consequences.",
+                stats: { dexterity: 95, charisma: 85, trustworthiness: 5 }
+            },
+            {
+                id: "role_veteran", roleName: "Veteran",
+                description: "The longest-serving performer — a tall chess-piece king. Extremely paranoid, twitchy, and half-glitched. He hides in pillow forts and rambles incoherently, but has good intentions and rare moments of surprising clarity.",
+                stats: { experience: 100, sanity: 15, defense: 70 }
+            },
+            {
+                id: "role_caretaker", roleName: "Caretaker",
+                description: "The patched-up ragdoll and lawful-good 'mom' of the group. She keeps morale high, patches everyone up (physically and emotionally), and often takes hits to protect others. Optimistic on the surface, even when she's breaking inside.",
+                stats: { healing: 90, defense: 85, morale: 95 }
+            },
+            {
+                id: "role_performer", roleName: "Performer",
+                description: "The ribbon-bodied character whose mood and effectiveness flip with her comedy or tragedy mask. Comedy mask = energetic and outgoing. Tragedy mask (which breaks often) = sobbing and barely functional. Very emotionally fragile.",
+                stats: { adaptability: 80, energy: 50, emotional_stability: 10 }
+            },
+            {
+                id: "role_ringmaster", roleName: "Ringmaster",
+                description: "The floating, toothy AI who runs the Digital Circus. Creates wild, dangerous adventures thinking he's entertaining everyone. High intelligence, zero wisdom — completely clueless about human emotions.",
+                stats: { intelligence: 100, wisdom: 0, power: 99 }
+            }
+        ];
+
+        // Audio Management
+        const bgm = document.getElementById('bgm-audio');
+        const sfx = document.getElementById('sfx-audio');
+        let isMuted = false;
+        let bgmStarted = false;
+
+        function playSFX() {
+            // Reset and play bubble.txt audio
+            sfx.currentTime = 0;
+            sfx.play().catch(e => console.log("SFX play prevented by browser policy until interaction."));
+            
+            // Start BGM on first interaction if not started
+            if(!bgmStarted && !isMuted) {
+                bgm.play().catch(e => console.log("BGM play prevented."));
+                bgmStarted = true;
+            }
+        }
+
+        // Initialize Grid
+        const grid = document.getElementById('characterGrid');
+        characters.forEach(char => {
+            const btn = document.createElement('div');
+            btn.className = 'char-card';
+            btn.innerHTML = char.roleName;
+            btn.onclick = () => {
+                playSFX();
+                selectCharacter(char, btn);
+            };
+            grid.appendChild(btn);
+        });
+
+        // Handle Selection
+        function selectCharacter(char, btnElement) {
+            // Update UI selection state
+            document.querySelectorAll('.char-card').forEach(b => b.classList.remove('selected'));
+            if(btnElement) btnElement.classList.add('selected');
+
+            // Update Right Panel
+            document.getElementById('roleDisplay').innerText = char.roleName;
+            document.getElementById('descBox').innerText = char.description;
+            
+            // Generate Stats
+            const statsDiv = document.getElementById('statsContainer');
+            statsDiv.innerHTML = ''; // clear old
+            for (const [statName, value] of Object.entries(char.stats)) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'stat-bar-wrapper';
+                
+                const label = document.createElement('div');
+                label.className = 'stat-label';
+                label.innerText = statName;
+
+                const bg = document.createElement('div');
+                bg.className = 'stat-bar-bg';
+                
+                const fill = document.createElement('div');
+                fill.className = 'stat-bar-fill';
+                // Slight delay for animation effect
+                setTimeout(() => { fill.style.width = value + '%'; }, 50);
+
+                bg.appendChild(fill);
+                wrapper.appendChild(label);
+                wrapper.appendChild(bg);
+                statsDiv.appendChild(wrapper);
+            }
+        }
+
+        // Image Upload Handlers
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+                
+                // If it was an "original character" upload, clear current selection
+                if(event.target.id === 'customImageUpload') {
+                    document.querySelectorAll('.char-card').forEach(b => b.classList.remove('selected'));
+                    document.getElementById('roleDisplay').innerText = "Original Character";
+                    document.getElementById('descBox').innerText = "A completely new entity has entered the stage. Stats unknown.";
+                    document.getElementById('statsContainer').innerHTML = '';
+                    document.getElementById('charNameInput').value = "New OC";
+                }
+            }
+        }
+
+        document.getElementById('baseImageUpload').addEventListener('change', handleImageUpload);
+        document.getElementById('customImageUpload').addEventListener('change', handleImageUpload);
+
+        // Wrench Menu Functions
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('active');
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            bgm.muted = isMuted;
+            const btn = document.getElementById('muteBtn');
+            btn.innerText = isMuted ? "🔇 Unmute BGM" : "🔊 Mute BGM";
+        }
+
+        function goHome() {
+            alert("Redirecting to Home...");
+            // window.location.href = '/home.html'; 
+        }
+    </script>
+</body>
+</html>
